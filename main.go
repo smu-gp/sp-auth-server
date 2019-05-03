@@ -28,7 +28,7 @@ func main() {
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: redisAddr,
-		DB: redisDb,
+		DB:   redisDb,
 	})
 	defer redisClient.Close()
 

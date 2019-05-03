@@ -27,5 +27,3 @@ func (usecase *connectionUsecase) InitConnection(userId string) string {
 func (usecase *connectionUsecase) Auth(connectionCode string) (string, error) {
 	panic("implement me")
 }
-
-

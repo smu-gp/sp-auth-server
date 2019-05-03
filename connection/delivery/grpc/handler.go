@@ -27,8 +27,3 @@ func (server *server) InitConnection(context.Context, *connection_grpc.Connectio
 func (server *server) Auth(context.Context, *connection_grpc.AuthRequest) (*connection_grpc.AuthResponse, error) {
 	panic("implement me")
 }
-
-
-
-
-
