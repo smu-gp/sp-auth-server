@@ -1,0 +1,11 @@
+{
+  "server": {
+    "addr": ":8005"
+  },
+  "database": {
+    "redis": {
+      "addr": "localhost:",
+      "db": 0
+    }
+  }
+}

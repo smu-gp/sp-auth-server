@@ -1,0 +1,37 @@
+syntax = "proto3";
+package connection_grpc;
+import "google/protobuf/empty.proto";
+
+service ConnectionService {
+    rpc requestUserId (google.protobuf.Empty) returns (RequestUserIdResponse) {}
+
+    rpc initConnection (ConnectionRequest) returns (ConnectionResponse) {}
+
+    rpc auth (AuthRequest) returns (AuthResponse) {}
+}
+
+message RequestUserIdResponse {
+    string userId = 1;
+}
+
+message ConnectionRequest {
+    string userId = 1;
+}
+
+message ConnectionResponse {
+    string connectionCode = 1;
+}
+
+message AuthRequest {
+    string connectionCode = 1;
+}
+
+message AuthResponse {
+    enum ResultMessage {
+        MESSAGE_UNKNOWN = 0;
+        MESSAGE_SUCCESS = 1;
+    }
+
+    ResultMessage message = 1;
+    string userId = 2;
+}
