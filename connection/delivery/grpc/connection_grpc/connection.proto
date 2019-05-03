@@ -3,14 +3,11 @@ package connection_grpc;
 import "google/protobuf/empty.proto";
 
 service ConnectionService {
-    rpc requestUserId (google.protobuf.Empty) returns (RequestUserIdResponse) {
-    }
+    rpc RequestUserId (google.protobuf.Empty) returns (RequestUserIdResponse);
 
-    rpc initConnection (ConnectionRequest) returns (ConnectionResponse) {
-    }
+    rpc Connection (ConnectionRequest) returns (ConnectionResponse);
 
-    rpc auth (AuthRequest) returns (AuthResponse) {
-    }
+    rpc Auth (AuthRequest) returns (AuthResponse);
 }
 
 message RequestUserIdResponse {

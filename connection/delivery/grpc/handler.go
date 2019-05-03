@@ -20,7 +20,7 @@ func (server *server) RequestUserId(context.Context, *empty.Empty) (*connection_
 	panic("implement me")
 }
 
-func (server *server) InitConnection(context.Context, *connection_grpc.ConnectionRequest) (*connection_grpc.ConnectionResponse, error) {
+func (server *server) Connection(context.Context, *connection_grpc.ConnectionRequest) (*connection_grpc.ConnectionResponse, error) {
 	panic("implement me")
 }
 
