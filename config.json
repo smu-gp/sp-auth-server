@@ -1,10 +1,10 @@
 {
   "server": {
-    "addr": ":8005"
+    "addr": ":8001"
   },
   "database": {
     "redis": {
-      "addr": "localhost:9000",
+      "addr": "redis:6379",
       "db": 0
     }
   }
