@@ -1,6 +1,9 @@
 package repository
 
-import "github.com/go-redis/redis"
+import (
+	"github.com/go-redis/redis"
+	"time"
+)
 
 type redisConnectionRepository struct {
 	client *redis.Client
@@ -10,10 +13,28 @@ func NewRedisConnectionRepository(client *redis.Client) ConnectionRepository {
 	return &redisConnectionRepository{client}
 }
 
-func (redisConnectionRepository) StoreCode(userId string, code int32) (*string, error) {
-	panic("implement me")
+func (repo *redisConnectionRepository) StoreSecret(userId string, secret string) (*string, error) {
+	var key = "connection:" + userId
+	err := repo.client.Set(key, secret, time.Second*60).Err()
+	if err != nil {
+		return nil, err
+	}
+	return &secret, nil
 }
 
-func (redisConnectionRepository) GetUserIdByCode(code int32) (*string, error) {
-	panic("implement me")
+func (repo *redisConnectionRepository) GetSecret(key string) (*string, error) {
+	result, err := repo.client.Get(key).Result()
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (repo *redisConnectionRepository) GetAllConnection() ([]string, error) {
+	scan := repo.client.Scan(0, "connection:*", 0)
+	keys, _, err := scan.Result()
+	if err != nil {
+		return nil, err
+	}
+	return keys, err
 }

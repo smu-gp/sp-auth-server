@@ -1,7 +1,7 @@
 package repository
 
 type ConnectionRepository interface {
-	StoreCode(userId string, code int32) (*string, error)
-
-	GetUserIdByCode(code int32) (*string, error)
+	StoreSecret(userId string, secret string) (*string, error)
+	GetSecret(key string) (*string, error)
+	GetAllConnection() ([]string, error)
 }

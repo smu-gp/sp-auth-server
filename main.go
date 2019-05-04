@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"github.com/go-redis/redis"
-	"log"
 	"net"
 
 	envConfig "github.com/smu-gp/sp-sync-server/config/env"
@@ -11,11 +9,14 @@ import (
 	connectionRepository "github.com/smu-gp/sp-sync-server/connection/repository"
 	connectionUsecase "github.com/smu-gp/sp-sync-server/connection/usecase"
 
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
 func main() {
+	log.SetFormatter(&log.TextFormatter{})
+
 	config := envConfig.NewViperConfig()
 	serverAddr := config.GetString(`server.addr`)
 	redisAddr := config.GetString(`database.redis.addr`)
@@ -30,6 +31,10 @@ func main() {
 		Addr: redisAddr,
 		DB:   redisDb,
 	})
+	_, err = redisClient.Ping().Result()
+	if err != nil {
+		log.Fatalf("failed to connect redis: %v", err)
+	}
 	defer redisClient.Close()
 
 	connRepository := connectionRepository.NewRedisConnectionRepository(redisClient)
@@ -37,7 +42,8 @@ func main() {
 
 	grpcServer := grpc.NewServer()
 	connectionDeliveryGrpc.NewConnectionGrpcServer(grpcServer, connUsecase)
-	fmt.Println("Running server at", serverAddr)
+
+	log.Info("running sever at", serverAddr)
 
 	reflection.Register(grpcServer)
 	if err := grpcServer.Serve(lis); err != nil {
