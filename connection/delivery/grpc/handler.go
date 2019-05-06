@@ -2,9 +2,8 @@ package grpc
 
 import (
 	"context"
-	"github.com/golang/protobuf/ptypes/empty"
 	_usecase "github.com/smu-gp/sp-sync-server/connection/usecase"
-	connectionProtobuf "github.com/smu-gp/sp-sync-server/protobuf/connection"
+	connectionProtobuf "github.com/smu-gp/sp-sync-server/protobuf/build"
 	"google.golang.org/grpc"
 )
 
@@ -19,7 +18,7 @@ type server struct {
 	usecase _usecase.ConnectionUsecase
 }
 
-func (server *server) RequestUserId(context.Context, *empty.Empty) (*connectionProtobuf.RequestUserIdResponse, error) {
+func (server *server) RequestUserId(context.Context, *connectionProtobuf.Empty) (*connectionProtobuf.RequestUserIdResponse, error) {
 	userId, err := server.usecase.RequestUserId()
 	return &connectionProtobuf.RequestUserIdResponse{UserId: userId}, err
 }
@@ -40,4 +39,3 @@ func (server *server) Auth(ctx context.Context, req *connectionProtobuf.AuthRequ
 		return &connectionProtobuf.AuthResponse{Message: connectionProtobuf.AuthResponse_MESSAGE_FAILED}, nil
 	}
 }
-

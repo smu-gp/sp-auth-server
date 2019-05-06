@@ -28,7 +28,7 @@ func (usecase *connectionUsecase) RequestUserId() (string, error) {
 
 func (usecase *connectionUsecase) Connection(userId string) (string, error) {
 	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer: "smu-gp",
+		Issuer:      "smu-gp",
 		AccountName: userId,
 	})
 	if key != nil {
