@@ -30,6 +30,14 @@ func (repo *redisConnectionRepository) GetSecret(key string) (*string, error) {
 	return &result, nil
 }
 
+func (repo *redisConnectionRepository) DeleteKey(key string) (bool, error) {
+	result, err := repo.client.Del(key).Result()
+	if err != nil {
+		return false, err
+	}
+	return result > 0, err
+}
+
 func (repo *redisConnectionRepository) GetAllConnection() ([]string, error) {
 	scan := repo.client.Scan(0, "connection:*", 0)
 	keys, _, err := scan.Result()

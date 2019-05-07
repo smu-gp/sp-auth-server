@@ -19,7 +19,7 @@ type ConnectionUsecase interface {
 }
 
 type connectionUsecase struct {
-	connectionRepository repository.ConnectionRepository
+	repository repository.ConnectionRepository
 }
 
 func (usecase *connectionUsecase) RequestUserId() (string, error) {
@@ -32,7 +32,7 @@ func (usecase *connectionUsecase) Connection(userId string) (string, error) {
 		AccountName: userId,
 	})
 	if key != nil {
-		_, err := usecase.connectionRepository.StoreSecret(userId, key.Secret())
+		_, err := usecase.repository.StoreSecret(userId, key.Secret())
 		code, err := totp.GenerateCode(key.Secret(), time.Now())
 		return code, err
 	} else {
@@ -41,17 +41,21 @@ func (usecase *connectionUsecase) Connection(userId string) (string, error) {
 }
 
 func (usecase *connectionUsecase) Auth(connectionCode string) (string, error) {
-	keys, err := usecase.connectionRepository.GetAllConnection()
+	keys, err := usecase.repository.GetAllConnection()
 	if err != nil {
 		return "", err
 	}
 	for i := range keys {
 		var key = keys[i]
-		secret, err := usecase.connectionRepository.GetSecret(key)
+		secret, err := usecase.repository.GetSecret(key)
 		if err != nil {
 			return "", err
 		}
 		if totp.Validate(connectionCode, *secret) {
+			deleted, err := usecase.repository.DeleteKey(key)
+			if err != nil || !deleted {
+				return "", err
+			}
 			return strings.Split(key, ":")[1], nil
 		}
 	}
