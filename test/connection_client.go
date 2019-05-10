@@ -31,8 +31,25 @@ func main() {
 	connectionResponse, err := client.Connection(context.Background(), &connectionGrpc.ConnectionRequest{UserId: userIdResponse.UserId})
 	log.Info(connectionResponse)
 
+	go func() {
+		stream, _ := client.WaitAuth(context.Background())
+		_ = stream.Send(&connectionGrpc.WaitAuthRequest{
+			UserId: userIdResponse.UserId,
+		})
+		response, _ := stream.Recv()
+		log.Info("Auth deviceName: ", response.AuthDevice.DeviceName, ", deviceType: ", response.AuthDevice.DeviceType)
+		_ = stream.Send(&connectionGrpc.WaitAuthRequest{
+			UserId:       userIdResponse.UserId,
+			AuthDevice:   response.AuthDevice,
+			AcceptDevice: true,
+		})
+	}()
+
 	code := promptConnectionCode()
-	authResponse, err := client.Auth(context.Background(), &connectionGrpc.AuthRequest{ConnectionCode: code})
+	authResponse, _ := client.Auth(context.Background(), &connectionGrpc.AuthRequest{ConnectionCode: code, DeviceInfo: &connectionGrpc.AuthDeviceInfo{
+		DeviceName: "TestDevice",
+		DeviceType: connectionGrpc.AuthDeviceInfo_DEVICE_TABLET,
+	}})
 	log.Info(authResponse.GetMessage(), " userId: ", authResponse.GetUserId())
 }
 

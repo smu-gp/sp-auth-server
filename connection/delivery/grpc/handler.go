@@ -34,8 +34,28 @@ func (server *server) Auth(ctx context.Context, req *connectionProtobuf.AuthRequ
 		return &connectionProtobuf.AuthResponse{Message: connectionProtobuf.AuthResponse_MESSAGE_FAILED}, err
 	}
 	if len(userId) > 0 {
-		return &connectionProtobuf.AuthResponse{Message: connectionProtobuf.AuthResponse_MESSAGE_SUCCESS, UserId: userId}, nil
+		accepted, err := server.usecase.RequestAuth(userId, req.DeviceInfo)
+		if err != nil {
+			return &connectionProtobuf.AuthResponse{Message: connectionProtobuf.AuthResponse_MESSAGE_FAILED}, err
+		}
+		if accepted {
+			return &connectionProtobuf.AuthResponse{Message: connectionProtobuf.AuthResponse_MESSAGE_SUCCESS, UserId: userId}, nil
+		} else {
+			return &connectionProtobuf.AuthResponse{Message: connectionProtobuf.AuthResponse_MESSAGE_FAILED}, err
+		}
 	} else {
 		return &connectionProtobuf.AuthResponse{Message: connectionProtobuf.AuthResponse_MESSAGE_FAILED}, nil
 	}
+}
+
+func (server *server) WaitAuth(stream connectionProtobuf.ConnectionService_WaitAuthServer) error {
+	req, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+	err = server.usecase.WaitAuth(req.UserId, stream)
+	if err != nil {
+		return err
+	}
+	return nil
 }

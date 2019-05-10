@@ -46,3 +46,15 @@ func (repo *redisConnectionRepository) GetAllConnection() ([]string, error) {
 	}
 	return keys, err
 }
+
+func (repo *redisConnectionRepository) Subscribe(channel string) *redis.PubSub {
+	return repo.client.Subscribe(channel)
+}
+
+func (repo *redisConnectionRepository) Publish(channel string, message string) error {
+	err := repo.client.Publish(channel, message).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
