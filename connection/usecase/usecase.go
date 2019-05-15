@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"github.com/go-redis/redis"
+	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
 	"github.com/pquerna/otp/totp"
 	"github.com/smu-gp/sp-sync-server/connection/repository"
@@ -69,16 +70,11 @@ func (usecase *connectionUsecase) Auth(connectionCode string) (string, error) {
 }
 
 func (usecase *connectionUsecase) RequestAuth(userId string, deviceInfo *connectionGrpc.AuthDeviceInfo) (bool, error) {
-	var message = deviceInfo.DeviceName + ","
-	if deviceInfo.DeviceType == connectionGrpc.AuthDeviceInfo_DEVICE_TABLET {
-		message += "TABLET"
-	} else {
-		message += "WEB"
-	}
 	pubSub := usecase.repository.Subscribe("auth_res:" + userId)
 	defer pubSub.Close()
 
-	err := usecase.repository.Publish("auth:"+userId, message)
+	deviceInfoData, _ := proto.Marshal(deviceInfo)
+	err := usecase.repository.Publish("auth:"+userId, string(deviceInfoData))
 	if err != nil {
 		return false, err
 	}
@@ -112,18 +108,10 @@ func (usecase *connectionUsecase) WaitAuth(userId string, stream connectionGrpc.
 
 		switch msg := iface.(type) {
 		case *redis.Message:
-			var deviceMessage = strings.Split(msg.Payload, ",")
-			var deviceType connectionGrpc.AuthDeviceInfo_DeviceType
-			if strings.Compare(deviceMessage[1], "TABLET") == 0 {
-				deviceType = connectionGrpc.AuthDeviceInfo_DEVICE_TABLET
-			} else {
-				deviceType = connectionGrpc.AuthDeviceInfo_DEVICE_WEB
-			}
+			var deviceInfo = &connectionGrpc.AuthDeviceInfo{}
+			_ = proto.Unmarshal([]byte(msg.Payload), deviceInfo)
 			err = stream.Send(&connectionGrpc.WaitAuthResponse{
-				AuthDevice: &connectionGrpc.AuthDeviceInfo{
-					DeviceName: deviceMessage[0],
-					DeviceType: deviceType,
-				},
+				AuthDevice: deviceInfo,
 			})
 			if err != nil {
 				return err
