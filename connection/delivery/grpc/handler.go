@@ -3,8 +3,9 @@ package grpc
 import (
 	"context"
 	_usecase "github.com/smu-gp/sp-sync-server/connection/usecase"
-	connectionProtobuf "github.com/smu-gp/sp-sync-server/protobuf/build"
+	connectionProtobuf "github.com/smu-gp/sp-sync-server/protobuf/connection"
 	"google.golang.org/grpc"
+	"io"
 )
 
 func NewConnectionGrpcServer(grpcServer *grpc.Server, connectionUsecase _usecase.ConnectionUsecase) {
@@ -16,11 +17,6 @@ func NewConnectionGrpcServer(grpcServer *grpc.Server, connectionUsecase _usecase
 
 type server struct {
 	usecase _usecase.ConnectionUsecase
-}
-
-func (server *server) RequestUserId(context.Context, *connectionProtobuf.Empty) (*connectionProtobuf.RequestUserIdResponse, error) {
-	userId, err := server.usecase.RequestUserId()
-	return &connectionProtobuf.RequestUserIdResponse{UserId: userId}, err
 }
 
 func (server *server) Connection(ctx context.Context, req *connectionProtobuf.ConnectionRequest) (*connectionProtobuf.ConnectionResponse, error) {
@@ -50,6 +46,9 @@ func (server *server) Auth(ctx context.Context, req *connectionProtobuf.AuthRequ
 
 func (server *server) WaitAuth(stream connectionProtobuf.ConnectionService_WaitAuthServer) error {
 	req, err := stream.Recv()
+	if err == io.EOF {
+		return nil
+	}
 	if err != nil {
 		return err
 	}

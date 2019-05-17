@@ -3,10 +3,10 @@ package usecase
 import (
 	"github.com/go-redis/redis"
 	"github.com/golang/protobuf/proto"
-	"github.com/google/uuid"
 	"github.com/pquerna/otp/totp"
 	"github.com/smu-gp/sp-sync-server/connection/repository"
-	connectionGrpc "github.com/smu-gp/sp-sync-server/protobuf/build"
+	connectionGrpc "github.com/smu-gp/sp-sync-server/protobuf/connection"
+	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -17,7 +17,6 @@ func NewConnectionUsecase(repository repository.ConnectionRepository) Connection
 }
 
 type ConnectionUsecase interface {
-	RequestUserId() (string, error)
 	Connection(userId string) (string, error)
 	Auth(connectionCode string) (string, error)
 	RequestAuth(userId string, deviceInfo *connectionGrpc.AuthDeviceInfo) (bool, error)
@@ -27,10 +26,6 @@ type ConnectionUsecase interface {
 
 type connectionUsecase struct {
 	repository repository.ConnectionRepository
-}
-
-func (usecase *connectionUsecase) RequestUserId() (string, error) {
-	return uuid.New().String(), nil
 }
 
 func (usecase *connectionUsecase) Connection(userId string) (string, error) {
@@ -117,6 +112,9 @@ func (usecase *connectionUsecase) WaitAuth(userId string, stream connectionGrpc.
 				return err
 			}
 			req, err := stream.Recv()
+			if err == io.EOF {
+				return nil
+			}
 			if err != nil {
 				return err
 			}

@@ -2,6 +2,8 @@ package main
 
 import (
 	"github.com/go-redis/redis"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"net"
 
 	envConfig "github.com/smu-gp/sp-sync-server/config/env"
@@ -9,23 +11,30 @@ import (
 	connectionRepository "github.com/smu-gp/sp-sync-server/connection/repository"
 	connectionUsecase "github.com/smu-gp/sp-sync-server/connection/usecase"
 
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
 func main() {
-	log.SetFormatter(&log.TextFormatter{})
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+	sugar := logger.Sugar()
 
 	config := envConfig.NewViperConfig()
 	serverAddr := config.GetString(`server.addr`)
 	redisAddr := config.GetString(`database.redis.addr`)
 	redisDb := config.GetInt(`database.redis.db`)
 
+	sugar.Infof("SERVER_ADDR=%s", serverAddr)
+	sugar.Infof("REDIS_ADDR=%s", redisAddr)
+	sugar.Infof("REDIS_DB=%d", redisDb)
+
 	lis, err := net.Listen("tcp", serverAddr)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		sugar.Fatalf("Failed to listen: %v", err)
 	}
+	sugar.Infof("Start listening %s", serverAddr)
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: redisAddr,
@@ -33,20 +42,24 @@ func main() {
 	})
 	_, err = redisClient.Ping().Result()
 	if err != nil {
-		log.Fatalf("failed to connect redis: %v", err)
+		sugar.Fatalf("Failed to connect redis: %v", err)
 	}
 	defer redisClient.Close()
+	sugar.Infof("Connect redis: %s", redisAddr)
+
+	grpcServer := grpc.NewServer(
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(grpc_zap.StreamServerInterceptor(logger))),
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(grpc_zap.UnaryServerInterceptor(logger))))
 
 	connRepository := connectionRepository.NewRedisConnectionRepository(redisClient)
 	connUsecase := connectionUsecase.NewConnectionUsecase(connRepository)
-
-	grpcServer := grpc.NewServer()
 	connectionDeliveryGrpc.NewConnectionGrpcServer(grpcServer, connUsecase)
 
-	log.Info("running sever at", serverAddr)
-
 	reflection.Register(grpcServer)
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+
+	sugar.Info("Start serve grpc server")
+	err = grpcServer.Serve(lis)
+	if err != nil {
+		sugar.Fatalf("Failed to serve: %v", err)
 	}
 }

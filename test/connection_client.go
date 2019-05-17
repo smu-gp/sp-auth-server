@@ -4,42 +4,44 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	log "github.com/sirupsen/logrus"
+	"github.com/google/uuid"
 	envConfig "github.com/smu-gp/sp-sync-server/config/env"
-	connectionGrpc "github.com/smu-gp/sp-sync-server/protobuf/build"
+	connectionGrpc "github.com/smu-gp/sp-sync-server/protobuf/connection"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"os"
 )
 
 func main() {
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+	sugar := logger.Sugar()
+
 	config := envConfig.NewViperConfig()
 	serverAddr := config.GetString(`server.addr`)
 
 	conn, err := grpc.Dial(`127.0.0.1`+serverAddr, grpc.WithInsecure())
 	if err != nil {
-		log.Error(`Failed connect`, err)
+		sugar.Error(`Failed connect`, err)
 	}
 	defer conn.Close()
 
-	client := connectionGrpc.NewConnectionServiceClient(conn)
-	userIdResponse, err := client.RequestUserId(context.Background(), &connectionGrpc.Empty{})
-	if err != nil {
-		log.Fatal(`Failed call request user id`)
-	}
-	log.Info(userIdResponse)
+	var userId = uuid.New().String()
+	sugar.Infof("Generated userId: %s", userId)
 
-	connectionResponse, err := client.Connection(context.Background(), &connectionGrpc.ConnectionRequest{UserId: userIdResponse.UserId})
-	log.Info(connectionResponse)
+	client := connectionGrpc.NewConnectionServiceClient(conn)
+	connectionResponse, err := client.Connection(context.Background(), &connectionGrpc.ConnectionRequest{UserId: userId})
+	sugar.Info(connectionResponse)
 
 	go func() {
 		stream, _ := client.WaitAuth(context.Background())
 		_ = stream.Send(&connectionGrpc.WaitAuthRequest{
-			UserId: userIdResponse.UserId,
+			UserId: userId,
 		})
 		response, _ := stream.Recv()
-		log.Info("Auth deviceName: ", response.AuthDevice.DeviceName, ", deviceType: ", response.AuthDevice.DeviceType)
+		sugar.Info("Auth deviceName: ", response.AuthDevice.DeviceName, ", deviceType: ", response.AuthDevice.DeviceType)
 		_ = stream.Send(&connectionGrpc.WaitAuthRequest{
-			UserId:       userIdResponse.UserId,
+			UserId:       userId,
 			AuthDevice:   response.AuthDevice,
 			AcceptDevice: true,
 		})
@@ -50,7 +52,7 @@ func main() {
 		DeviceName: "TestDevice",
 		DeviceType: connectionGrpc.AuthDeviceInfo_DEVICE_TABLET,
 	}})
-	log.Info(authResponse.GetMessage(), " userId: ", authResponse.GetUserId())
+	sugar.Info(authResponse.GetMessage(), " userId: ", authResponse.GetUserId())
 }
 
 func promptConnectionCode() string {
