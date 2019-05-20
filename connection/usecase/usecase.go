@@ -19,7 +19,7 @@ func NewConnectionUsecase(repository repository.ConnectionRepository) Connection
 type ConnectionUsecase interface {
 	Connection(userId string) (string, error)
 	Auth(connectionCode string) (string, error)
-	RequestAuth(userId string, deviceInfo *connectionGrpc.AuthDeviceInfo) (bool, error)
+	RequestAuth(userId string, deviceInfo *connectionGrpc.AuthDeviceInfo) (bool, connectionGrpc.AuthResponse_FailedReason, error)
 	WaitAuth(userId string, stream connectionGrpc.ConnectionService_WaitAuthServer) error
 	ResponseAuth(userId string, accept bool) error
 }
@@ -64,29 +64,33 @@ func (usecase *connectionUsecase) Auth(connectionCode string) (string, error) {
 	return "", nil
 }
 
-func (usecase *connectionUsecase) RequestAuth(userId string, deviceInfo *connectionGrpc.AuthDeviceInfo) (bool, error) {
+func (usecase *connectionUsecase) RequestAuth(userId string, deviceInfo *connectionGrpc.AuthDeviceInfo) (bool, connectionGrpc.AuthResponse_FailedReason, error) {
 	pubSub := usecase.repository.Subscribe("auth_res:" + userId)
 	defer pubSub.Close()
 
 	deviceInfoData, _ := proto.Marshal(deviceInfo)
-	err := usecase.repository.Publish("auth:"+userId, string(deviceInfoData))
+	subs, err := usecase.repository.Publish("auth:"+userId, string(deviceInfoData))
 	if err != nil {
-		return false, err
+		return false, connectionGrpc.AuthResponse_INTERNAL_ERR, err
+	}
+	if subs == 0 {
+		return false, connectionGrpc.AuthResponse_NO_HOST_WAITED, nil
 	}
 
 	for {
 		iface, err := pubSub.Receive()
 		if err != nil {
-			return false, err
+			return false, connectionGrpc.AuthResponse_INTERNAL_ERR, err
 		}
 
 		switch msg := iface.(type) {
 		case *redis.Message:
-			accepted, err := strconv.ParseBool(msg.Payload)
-			if err != nil {
-				return false, err
+			accepted, _ := strconv.ParseBool(msg.Payload)
+			var reason = connectionGrpc.AuthResponse_REJECT_HOST
+			if accepted {
+				reason = connectionGrpc.AuthResponse_NONE
 			}
-			return accepted, nil
+			return accepted, reason, nil
 		}
 	}
 }
@@ -130,5 +134,6 @@ func (usecase *connectionUsecase) WaitAuth(userId string, stream connectionGrpc.
 }
 
 func (usecase *connectionUsecase) ResponseAuth(userId string, accept bool) error {
-	return usecase.repository.Publish("auth_res:"+userId, strconv.FormatBool(accept))
+	_, err := usecase.repository.Publish("auth_res:"+userId, strconv.FormatBool(accept))
+	return err
 }

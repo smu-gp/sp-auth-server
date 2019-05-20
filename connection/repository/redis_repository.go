@@ -51,10 +51,11 @@ func (repo *redisConnectionRepository) Subscribe(channel string) *redis.PubSub {
 	return repo.client.Subscribe(channel)
 }
 
-func (repo *redisConnectionRepository) Publish(channel string, message string) error {
-	err := repo.client.Publish(channel, message).Err()
+func (repo *redisConnectionRepository) Publish(channel string, message string) (int, error) {
+	result := repo.client.Publish(channel, message)
+	err := result.Err()
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+	return int(result.Val()), nil
 }

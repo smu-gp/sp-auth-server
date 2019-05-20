@@ -25,22 +25,33 @@ func (server *server) Connection(ctx context.Context, req *connectionProtobuf.Co
 }
 
 func (server *server) Auth(ctx context.Context, req *connectionProtobuf.AuthRequest) (*connectionProtobuf.AuthResponse, error) {
+	response := &connectionProtobuf.AuthResponse{}
 	userId, err := server.usecase.Auth(req.ConnectionCode)
 	if err != nil {
-		return &connectionProtobuf.AuthResponse{Message: connectionProtobuf.AuthResponse_MESSAGE_FAILED}, err
+		response.Message = connectionProtobuf.AuthResponse_MESSAGE_FAILED
+		response.FailedReason = connectionProtobuf.AuthResponse_INTERNAL_ERR
+		return response, err
 	}
 	if len(userId) > 0 {
-		accepted, err := server.usecase.RequestAuth(userId, req.DeviceInfo)
+		accepted, reason, err := server.usecase.RequestAuth(userId, req.DeviceInfo)
 		if err != nil {
-			return &connectionProtobuf.AuthResponse{Message: connectionProtobuf.AuthResponse_MESSAGE_FAILED}, err
+			response.Message = connectionProtobuf.AuthResponse_MESSAGE_FAILED
+			response.FailedReason = reason
+			return response, err
 		}
 		if accepted {
-			return &connectionProtobuf.AuthResponse{Message: connectionProtobuf.AuthResponse_MESSAGE_SUCCESS, UserId: userId}, nil
+			response.Message = connectionProtobuf.AuthResponse_MESSAGE_SUCCESS
+			response.UserId = userId
+			return response, nil
 		} else {
-			return &connectionProtobuf.AuthResponse{Message: connectionProtobuf.AuthResponse_MESSAGE_FAILED}, err
+			response.Message = connectionProtobuf.AuthResponse_MESSAGE_FAILED
+			response.FailedReason = reason
+			return response, err
 		}
 	} else {
-		return &connectionProtobuf.AuthResponse{Message: connectionProtobuf.AuthResponse_MESSAGE_FAILED}, nil
+		response.Message = connectionProtobuf.AuthResponse_MESSAGE_FAILED
+		response.FailedReason = connectionProtobuf.AuthResponse_AUTH_FAILED
+		return response, nil
 	}
 }
 

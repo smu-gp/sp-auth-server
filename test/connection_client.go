@@ -52,7 +52,7 @@ func main() {
 		DeviceName: "TestDevice",
 		DeviceType: connectionGrpc.AuthDeviceInfo_DEVICE_TABLET,
 	}})
-	sugar.Info(authResponse.GetMessage(), " userId: ", authResponse.GetUserId())
+	sugar.Info(authResponse.GetMessage(), " userId: ", authResponse.GetUserId(), " failedReason: ", authResponse.GetFailedReason())
 }
 
 func promptConnectionCode() string {

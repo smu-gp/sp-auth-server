@@ -8,5 +8,5 @@ type ConnectionRepository interface {
 	DeleteKey(key string) (bool, error)
 	GetAllConnection() ([]string, error)
 	Subscribe(channel string) *redis.PubSub
-	Publish(channel string, message string) error
+	Publish(channel string, message string) (int, error)
 }
