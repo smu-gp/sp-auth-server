@@ -181,3 +181,41 @@ func TestAuth_No_Host_Waited(t *testing.T) {
 		t.Error("FailedReason is not equal", authResponse.FailedReason)
 	}
 }
+
+func TestAuth_Response_Timeout(t *testing.T) {
+	conn, err := InitConn()
+	defer conn.Close()
+	if err != nil {
+		t.Error("Not connected")
+	}
+
+	var userId = uuid.New().String()
+	client := connectionGrpc.NewConnectionServiceClient(conn)
+	connectionResponse, err := client.Connection(context.Background(), &connectionGrpc.ConnectionRequest{UserId: userId})
+	if err != nil {
+		t.Error("Error occurred")
+	}
+	if len(connectionResponse.ConnectionCode) == 0 {
+		t.Error("Not generated connection code")
+	}
+
+	code := connectionResponse.ConnectionCode
+	go func() {
+		stream, _ := client.WaitAuth(context.Background())
+		_ = stream.Send(&connectionGrpc.WaitAuthRequest{
+			UserId: userId,
+		})
+	}()
+
+	authResponse, _ := client.Auth(context.Background(), &connectionGrpc.AuthRequest{ConnectionCode: code, DeviceInfo: &connectionGrpc.AuthDeviceInfo{
+		DeviceName: "TestDevice",
+		DeviceType: connectionGrpc.AuthDeviceInfo_DEVICE_TABLET,
+	}})
+
+	if authResponse.Message != connectionGrpc.AuthResponse_MESSAGE_FAILED {
+		t.Error("Success auth")
+	}
+	if authResponse.FailedReason != connectionGrpc.AuthResponse_RESPONSE_TIMEOUT {
+		t.Error("FailedReason is not equal", authResponse.FailedReason)
+	}
+}

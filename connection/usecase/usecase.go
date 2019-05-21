@@ -1,7 +1,6 @@
 package usecase
 
 import (
-	"github.com/go-redis/redis"
 	"github.com/golang/protobuf/proto"
 	"github.com/pquerna/otp/totp"
 	"github.com/smu-gp/sp-sync-server/connection/repository"
@@ -77,60 +76,54 @@ func (usecase *connectionUsecase) RequestAuth(userId string, deviceInfo *connect
 		return false, connectionGrpc.AuthResponse_NO_HOST_WAITED, nil
 	}
 
-	for {
-		iface, err := pubSub.Receive()
-		if err != nil {
-			return false, connectionGrpc.AuthResponse_INTERNAL_ERR, err
-		}
+	ch := pubSub.Channel()
 
-		switch msg := iface.(type) {
-		case *redis.Message:
-			accepted, _ := strconv.ParseBool(msg.Payload)
-			var reason = connectionGrpc.AuthResponse_REJECT_HOST
-			if accepted {
-				reason = connectionGrpc.AuthResponse_NONE
-			}
-			return accepted, reason, nil
+	time.AfterFunc(time.Minute, func() {
+		_ = pubSub.Close()
+	})
+
+	for msg := range ch {
+		accepted, _ := strconv.ParseBool(msg.Payload)
+		var reason = connectionGrpc.AuthResponse_REJECT_HOST
+		if accepted {
+			reason = connectionGrpc.AuthResponse_NONE
 		}
+		return accepted, reason, nil
 	}
+	return false, connectionGrpc.AuthResponse_RESPONSE_TIMEOUT, nil
 }
 
 func (usecase *connectionUsecase) WaitAuth(userId string, stream connectionGrpc.ConnectionService_WaitAuthServer) error {
 	pubSub := usecase.repository.Subscribe("auth:" + userId)
 	defer pubSub.Close()
 
-	for {
-		iface, err := pubSub.Receive()
+	ch := pubSub.Channel()
+
+	for msg := range ch {
+		var deviceInfo = &connectionGrpc.AuthDeviceInfo{}
+		_ = proto.Unmarshal([]byte(msg.Payload), deviceInfo)
+		err := stream.Send(&connectionGrpc.WaitAuthResponse{
+			AuthDevice: deviceInfo,
+		})
 		if err != nil {
 			return err
 		}
-
-		switch msg := iface.(type) {
-		case *redis.Message:
-			var deviceInfo = &connectionGrpc.AuthDeviceInfo{}
-			_ = proto.Unmarshal([]byte(msg.Payload), deviceInfo)
-			err = stream.Send(&connectionGrpc.WaitAuthResponse{
-				AuthDevice: deviceInfo,
-			})
-			if err != nil {
-				return err
-			}
-			req, err := stream.Recv()
-			if err == io.EOF {
-				return nil
-			}
-			if err != nil {
-				return err
-			}
-			err = usecase.ResponseAuth(userId, req.AcceptDevice)
-			if err != nil {
-				return err
-			}
-			if req.AcceptDevice {
-				return nil
-			}
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		err = usecase.ResponseAuth(userId, req.AcceptDevice)
+		if err != nil {
+			return err
+		}
+		if req.AcceptDevice {
+			return nil
 		}
 	}
+	return nil
 }
 
 func (usecase *connectionUsecase) ResponseAuth(userId string, accept bool) error {
