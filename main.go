@@ -4,10 +4,10 @@ import (
 	"github.com/go-redis/redis"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	"github.com/smu-gp/sp-sync-server/connection"
 	"net"
 
 	envConfig "github.com/smu-gp/sp-sync-server/config/env"
-	connectionDeliveryGrpc "github.com/smu-gp/sp-sync-server/connection/delivery/grpc"
 	connectionRepository "github.com/smu-gp/sp-sync-server/connection/repository"
 	connectionUsecase "github.com/smu-gp/sp-sync-server/connection/usecase"
 
@@ -53,7 +53,7 @@ func main() {
 
 	connRepository := connectionRepository.NewRedisConnectionRepository(redisClient)
 	connUsecase := connectionUsecase.NewConnectionUsecase(connRepository)
-	connectionDeliveryGrpc.NewConnectionGrpcServer(grpcServer, connUsecase)
+	connection.NewConnectionGrpcServer(grpcServer, connUsecase)
 
 	reflection.Register(grpcServer)
 
