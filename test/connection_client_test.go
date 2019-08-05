@@ -66,7 +66,7 @@ func TestAuth_Success(t *testing.T) {
 	code := connectionResponse.ConnectionCode
 	authResponse, _ := client.Auth(context.Background(), &connectionGrpc.AuthRequest{ConnectionCode: code, DeviceInfo: &connectionGrpc.AuthDeviceInfo{
 		DeviceName: "TestDevice",
-		DeviceType: connectionGrpc.AuthDeviceInfo_DEVICE_TABLET,
+		DeviceType: connectionGrpc.AuthDeviceInfo_DEVICE_ANDROID,
 	}})
 
 	if authResponse.Message != connectionGrpc.AuthResponse_MESSAGE_SUCCESS {
@@ -97,7 +97,7 @@ func TestAuth_Auth_Failed(t *testing.T) {
 	code := "0"
 	authResponse, _ := client.Auth(context.Background(), &connectionGrpc.AuthRequest{ConnectionCode: code, DeviceInfo: &connectionGrpc.AuthDeviceInfo{
 		DeviceName: "TestDevice",
-		DeviceType: connectionGrpc.AuthDeviceInfo_DEVICE_TABLET,
+		DeviceType: connectionGrpc.AuthDeviceInfo_DEVICE_ANDROID,
 	}})
 
 	if authResponse.Message != connectionGrpc.AuthResponse_MESSAGE_FAILED {
@@ -140,7 +140,7 @@ func TestAuth_Reject_Host(t *testing.T) {
 	code := connectionResponse.ConnectionCode
 	authResponse, _ := client.Auth(context.Background(), &connectionGrpc.AuthRequest{ConnectionCode: code, DeviceInfo: &connectionGrpc.AuthDeviceInfo{
 		DeviceName: "TestDevice",
-		DeviceType: connectionGrpc.AuthDeviceInfo_DEVICE_TABLET,
+		DeviceType: connectionGrpc.AuthDeviceInfo_DEVICE_ANDROID,
 	}})
 
 	if authResponse.Message != connectionGrpc.AuthResponse_MESSAGE_FAILED {
@@ -171,7 +171,7 @@ func TestAuth_No_Host_Waited(t *testing.T) {
 	code := connectionResponse.ConnectionCode
 	authResponse, _ := client.Auth(context.Background(), &connectionGrpc.AuthRequest{ConnectionCode: code, DeviceInfo: &connectionGrpc.AuthDeviceInfo{
 		DeviceName: "TestDevice",
-		DeviceType: connectionGrpc.AuthDeviceInfo_DEVICE_TABLET,
+		DeviceType: connectionGrpc.AuthDeviceInfo_DEVICE_ANDROID,
 	}})
 
 	if authResponse.Message != connectionGrpc.AuthResponse_MESSAGE_FAILED {
@@ -209,7 +209,7 @@ func TestAuth_Response_Timeout(t *testing.T) {
 
 	authResponse, _ := client.Auth(context.Background(), &connectionGrpc.AuthRequest{ConnectionCode: code, DeviceInfo: &connectionGrpc.AuthDeviceInfo{
 		DeviceName: "TestDevice",
-		DeviceType: connectionGrpc.AuthDeviceInfo_DEVICE_TABLET,
+		DeviceType: connectionGrpc.AuthDeviceInfo_DEVICE_ANDROID,
 	}})
 
 	if authResponse.Message != connectionGrpc.AuthResponse_MESSAGE_FAILED {
